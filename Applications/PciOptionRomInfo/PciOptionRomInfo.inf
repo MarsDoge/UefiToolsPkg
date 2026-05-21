@@ -2,7 +2,6 @@
 # PCI Option ROM information shell application.
 #
 # Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
-# Author: MarsDoge (Dongyan Qian)
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -20,6 +19,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
 
 [LibraryClasses]
   UefiApplicationEntryPoint
