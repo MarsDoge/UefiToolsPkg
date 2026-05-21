@@ -1,0 +1,30 @@
+# EDK II build output
+Build/
+Conf/
+*.efi
+*.debug
+*.map
+*.dll
+*.obj
+*.lib
+*.depex
+*.deps
+*.makefile
+AutoGen.c
+AutoGen.h
+AutoGenTimeStamp
+*.lst
+
+# Local/editor noise
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Agent/local state; never commit secrets
+.hermes/
+.env
+*.pem
+id_rsa
+id_ed25519

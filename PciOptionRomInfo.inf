@@ -1,0 +1,33 @@
+## @file
+# PCI Option ROM information shell application.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+# Author: MarsDoge (Dongyan Qian)
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PciOptionRomInfo
+  FILE_GUID                      = 7A3F7F95-8475-44C8-A84D-4BC1E5AF7B54
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  PciOptionRomInfo.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid
