@@ -24,32 +24,34 @@ The parser includes bounds checks for truncated headers, invalid PCIR offsets, i
 
 This repository is an EDK II module, not a complete standalone EDK II workspace. Build it from an existing EDK II workspace and expose this repository as a package path.
 
-Example using `/home/qdy/ModernSetupPkg/External/edk2` as `WORKSPACE` and `/home/qdy` as the package path that contains this repo:
+Example using generic workspace variables. Set `WORKSPACE` to the directory that contains this repository, set `EDK2_DIR` to your EDK II checkout, and export `PACKAGES_PATH` so EDK II can find both trees:
 
 ```sh
-export WORKSPACE=/home/qdy/ModernSetupPkg/External/edk2
-export PACKAGES_PATH=/home/qdy:$WORKSPACE
-cd "$WORKSPACE"
+: "${WORKSPACE:?set WORKSPACE to the directory containing uefi-tools}"
+: "${EDK2_DIR:?set EDK2_DIR to your EDK II checkout}"
+export PACKAGES_PATH="$WORKSPACE:$EDK2_DIR"
+cd "$EDK2_DIR"
 source edksetup.sh
-build -p ShellPkg/ShellPkg.dsc -m pci-option-rom-info/PciOptionRomInfo.inf -a X64 -t GCC5 -b DEBUG
+build -p ShellPkg/ShellPkg.dsc -m uefi-tools/PciOptionRomInfo.inf -a X64 -t GCC5 -b DEBUG
 ```
 
-For a platform DSC such as ModernSetupPkg, add the module INF to the DSC `[Components]` section and build it with the platform:
+For a platform DSC, add the module INF to the DSC `[Components]` section and build it with the platform:
 
 ```ini
 [Components]
-  pci-option-rom-info/PciOptionRomInfo.inf
+  uefi-tools/PciOptionRomInfo.inf
 ```
 
 Then build with your normal platform command, for example:
 
 ```sh
-export WORKSPACE=/home/qdy/ModernSetupPkg/External/edk2
-export PACKAGES_PATH=/home/qdy:$WORKSPACE
-cd "$WORKSPACE"
+: "${WORKSPACE:?set WORKSPACE to the directory containing uefi-tools}"
+: "${EDK2_DIR:?set EDK2_DIR to your EDK II checkout}"
+export PACKAGES_PATH="$WORKSPACE:$EDK2_DIR"
+cd "$EDK2_DIR"
 source edksetup.sh
-build -p ModernSetupPkg/Experimental/ModernSetupApp.dsc \
-  -m pci-option-rom-info/PciOptionRomInfo.inf \
+build -p YourPlatformPkg/YourPlatform.dsc \
+  -m uefi-tools/PciOptionRomInfo.inf \
   -a LOONGARCH64 -t GCC -b DEBUG
 ```
 

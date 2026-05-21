@@ -22,8 +22,7 @@ AutoGenTimeStamp
 .vscode/
 .idea/
 
-# Agent/local state; never commit secrets
-.hermes/
+# Local secrets; never commit credentials
 .env
 *.pem
 id_rsa
