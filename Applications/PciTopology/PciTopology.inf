@@ -1,0 +1,33 @@
+## @file
+# PCI topology shell application.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = PciTopology
+  FILE_GUID                      = 5C00A7D8-A195-43A3-A95D-9BBA687D8959
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  PciTopology.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+
+[Protocols]
+  gEfiPciIoProtocolGuid

@@ -68,8 +68,6 @@ MachineTypeName (
       return L"IA64";
     case EFI_IMAGE_MACHINE_EBC:
       return L"EBC";
-    case EFI_IMAGE_MACHINE_ARMTHUMB_MIXED:
-      return L"ARM/Thumb";
     case EFI_IMAGE_MACHINE_AARCH64:
       return L"AARCH64";
     case EFI_IMAGE_MACHINE_RISCV32:

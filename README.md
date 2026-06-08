@@ -2,7 +2,10 @@
 
 UefiToolsPkg is a small EDK II package for UEFI utilities.
 
-It currently contains `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
+It currently contains:
+
+- `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
+- `PciTopology`, a UEFI Shell / UEFI Application that prints a firmware-visible PCI/PCIe topology tree similar to the relationship view from Linux `lspci -tv`.
 
 `PciOptionRomInfo` enumerates PCI I/O handles, skips devices without an Option ROM, then prints:
 
@@ -17,11 +20,29 @@ It currently contains `PciOptionRomInfo`, a UEFI Shell / UEFI Application for in
 
 The parser includes bounds checks for truncated headers, invalid PCIR offsets, invalid image lengths, and multi-image Option ROMs.
 
+`PciTopology` enumerates PCI I/O handles, reads config space, identifies PCI-to-PCI bridges, and prints the firmware-visible topology inferred from each bridge's primary / secondary / subordinate bus numbers. Example output shape:
+
+```text
+PCI Topology (EFI_PCI_IO_PROTOCOL scan)
+Devices=5 Bridges=1
+
+Domain 0000
++- 00:00.0 [060000] Host bridge 0014:7a00
+`- 00:01.0 [060400] PCI bridge 0014:7a01 -> bus 01-01 primary=00
+   +- 01:00.0 [010802] Mass storage 1d0f:8061
+   `- 01:01.0 [020000] Network 1af4:1000
+```
+
+Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`; devices not enumerated by firmware will not appear.
+
 ## Package layout
 
 - `UefiToolsPkg.dec`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.c`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.inf`
+- `Applications/PciTopology/PciTopology.c`
+- `Applications/PciTopology/PciTopology.inf`
+- `UefiToolsPkg.dsc`
 
 ## Build with EDK II
 
@@ -35,9 +56,17 @@ Example using generic workspace variables. Set `WORKSPACE` to the directory that
 export PACKAGES_PATH="$WORKSPACE:$EDK2_DIR"
 cd "$EDK2_DIR"
 source edksetup.sh
-build -p ShellPkg/ShellPkg.dsc \
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/PciTopology/PciTopology.inf \
+  -a LOONGARCH64 -t GCC -b DEBUG
+```
+
+For the existing Option ROM scanner:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
   -m UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf \
-  -a X64 -t GCC5 -b DEBUG
+  -a LOONGARCH64 -t GCC -b DEBUG
 ```
 
 For a platform DSC, add the module INF to the DSC `[Components]` section and build it with the platform:
