@@ -4,8 +4,13 @@ UefiToolsPkg is a small EDK II package for UEFI utilities.
 
 It currently contains:
 
+- `NullAddressProbe`, a UEFI Shell / UEFI Application that intentionally loads from virtual address `0x0` to test whether firmware null-pointer detection is enforced by page tables.
 - `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
 - `PciTopology`, a UEFI Shell / UEFI Application that prints a firmware-visible PCI/PCIe topology tree similar to the relationship view from Linux `lspci -tv`.
+
+`NullAddressProbe` prints a warning, then executes an architecture-specific load from virtual address `0x0` using inline assembly. If firmware page tables enforce NULL pointer detection, the application should stop at that load with a CPU exception. If it prints `DONE`, address `0x0` is readable in the current firmware mapping.
+
+This is intentionally a fault-injection diagnostic. Run it only in a VM, lab system, or controlled firmware shell session.
 
 `PciOptionRomInfo` enumerates PCI I/O handles, skips devices without an Option ROM, then prints:
 
@@ -38,6 +43,8 @@ Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`
 ## Package layout
 
 - `UefiToolsPkg.dec`
+- `Applications/NullAddressProbe/NullAddressProbe.c`
+- `Applications/NullAddressProbe/NullAddressProbe.inf`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.c`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.inf`
 - `Applications/PciTopology/PciTopology.c`
@@ -58,6 +65,14 @@ cd "$EDK2_DIR"
 source edksetup.sh
 build -p UefiToolsPkg/UefiToolsPkg.dsc \
   -m UefiToolsPkg/Applications/PciTopology/PciTopology.inf \
+  -a LOONGARCH64 -t GCC -b DEBUG
+```
+
+For the null-address probe:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/NullAddressProbe/NullAddressProbe.inf \
   -a LOONGARCH64 -t GCC -b DEBUG
 ```
 
