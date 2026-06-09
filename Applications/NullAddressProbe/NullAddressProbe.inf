@@ -1,0 +1,27 @@
+## @file
+# Null address access probe shell application.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = NullAddressProbe
+  FILE_GUID                      = 8B6F9A30-9A16-4E83-9D5E-B5E1B3B2C4A1
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  NullAddressProbe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  UefiApplicationEntryPoint
+  UefiLib
