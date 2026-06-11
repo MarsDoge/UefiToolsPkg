@@ -124,7 +124,7 @@ PrintEntryBits (
   )
 {
   Print (
-    L"%s=%016lx V=%u D=%u PLV=%u C=%u G/H=%u P=%u W=%u H=%u NR=%u NX=%u RPLV=%u\r\n",
+    L"%s=%016lx V=%u D=%u PLV=%u C=%u G/Huge=%u P=%u W=%u Bit12=%u NR=%u NX=%u RPLV=%u\r\n",
     Name,
     Entry,
     (Entry & BIT0) ? 1 : 0,
@@ -139,6 +139,23 @@ PrintEntryBits (
     (Entry & BIT62) ? 1 : 0,
     (Entry & BIT63) ? 1 : 0
     );
+}
+
+STATIC
+VOID
+PrintEntryKind (
+  IN UINT64  Entry,
+  IN UINTN   Level,
+  IN UINTN   MaxLevel
+  )
+{
+  if ((Level < (MaxLevel - 1)) && ((Entry & (BIT6 | BIT12)) != (BIT6 | BIT12))) {
+    Print (L"  kind=table-pointer; Bit12 is part of next-table PPN, not HGlobal\r\n");
+  } else if ((Level < (MaxLevel - 1)) && ((Entry & (BIT6 | BIT12)) == (BIT6 | BIT12))) {
+    Print (L"  kind=huge-leaf; bit6=HUGE/G, bit12=HGLOBAL\r\n");
+  } else {
+    Print (L"  kind=page-leaf; bit6=GLOBAL, bit12 is PFN bit 0\r\n");
+  }
 }
 
 STATIC
@@ -262,6 +279,7 @@ DumpPageWalk (
       (UINT64)(UINTN)&Table[Index]
       );
     PrintEntryBits (L"Entry", Entry);
+    PrintEntryKind (Entry, Level, MaxLevel);
 
     if (!IsTableEntry (Entry, Level, MaxLevel)) {
       if (Level < (MaxLevel - 1)) {
