@@ -5,12 +5,37 @@ UefiToolsPkg is a small EDK II package for UEFI utilities.
 It currently contains:
 
 - `NullAddressProbe`, a UEFI Shell / UEFI Application that intentionally loads from virtual address `0x0` to test whether firmware null-pointer detection is enforced by page tables.
+- `LoongArchMappingDump`, a LOONGARCH64 UEFI Shell / UEFI Application that dumps the page-table walk and current TLB entry for a specified virtual address.
 - `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
 - `PciTopology`, a UEFI Shell / UEFI Application that prints a firmware-visible PCI/PCIe topology tree similar to the relationship view from Linux `lspci -tv`.
 
 `NullAddressProbe` prints a warning, then executes an architecture-specific load from virtual address `0x0` using inline assembly. If firmware page tables enforce NULL pointer detection, the application should stop at that load with a CPU exception. If it prints `DONE`, address `0x0` is readable in the current firmware mapping.
 
 This is intentionally a fault-injection diagnostic. Run it only in a VM, lab system, or controlled firmware shell session.
+
+`LoongArchMappingDump` is a non-faulting LOONGARCH64 MMU diagnostic. It does
+not load from the target address. Instead, it prints the firmware page-table
+walk and searches the current TLB for a live entry that covers the requested
+virtual address. If no argument is provided, it dumps virtual address `0x0`:
+
+```text
+LoongArchMappingDump.efi
+LoongArchMappingDump.efi 0x0
+LoongArchMappingDump.efi 0x90000000
+```
+
+The output includes:
+
+- `PGDL`, `PGDH`, `PWCTL0`, `PWCTL1`, `STLBPGSIZE`, and direct-map-window CSRs
+- the selected page-table root and each walked level
+- decoded entry bits: `V`, `D`, `PLV`, cache attribute, `G/Huge`, `P`, `W`, `Bit12`, `NR`, `NX`, and `RPLV`
+- entry kind hints for table pointers, huge leaves, page leaves, and invalid entries
+- `TLBSRCH` / `TLBRD` output when a current TLB entry covers the target address
+
+For non-leaf table pointers, `Bit12` is part of the next-table physical page
+number, not `HGlobal`. For huge-leaf entries, bit 6 is `HUGE` / `G` and bit 12
+is `HGLOBAL`. The tool prints the interpreted entry kind to avoid confusing
+table-pointer address bits with huge-page attributes.
 
 `PciOptionRomInfo` enumerates PCI I/O handles, skips devices without an Option ROM, then prints:
 
@@ -45,6 +70,8 @@ Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`
 - `UefiToolsPkg.dec`
 - `Applications/NullAddressProbe/NullAddressProbe.c`
 - `Applications/NullAddressProbe/NullAddressProbe.inf`
+- `Applications/LoongArchMappingDump/LoongArchMappingDump.c`
+- `Applications/LoongArchMappingDump/LoongArchMappingDump.inf`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.c`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.inf`
 - `Applications/PciTopology/PciTopology.c`
@@ -73,6 +100,14 @@ For the null-address probe:
 ```sh
 build -p UefiToolsPkg/UefiToolsPkg.dsc \
   -m UefiToolsPkg/Applications/NullAddressProbe/NullAddressProbe.inf \
+  -a LOONGARCH64 -t GCC -b DEBUG
+```
+
+For the LoongArch mapping dump tool:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/LoongArchMappingDump/LoongArchMappingDump.inf \
   -a LOONGARCH64 -t GCC -b DEBUG
 ```
 

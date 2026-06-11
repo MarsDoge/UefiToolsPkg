@@ -142,6 +142,29 @@ PrintEntryBits (
 }
 
 STATIC
+CONST CHAR16 *
+GetEntryKind (
+  IN UINT64  Entry,
+  IN UINTN   Level,
+  IN UINTN   MaxLevel
+  )
+{
+  if (Entry == 0) {
+    return L"invalid-entry";
+  }
+
+  if ((Level < (MaxLevel - 1)) && ((Entry & (BIT6 | BIT12)) == (BIT6 | BIT12))) {
+    return L"huge-leaf";
+  }
+
+  if (Level >= (MaxLevel - 1)) {
+    return L"page-leaf";
+  }
+
+  return L"table-pointer";
+}
+
+STATIC
 VOID
 PrintEntryKind (
   IN UINT64  Entry,
@@ -149,12 +172,17 @@ PrintEntryKind (
   IN UINTN   MaxLevel
   )
 {
-  if ((Level < (MaxLevel - 1)) && ((Entry & (BIT6 | BIT12)) != (BIT6 | BIT12))) {
+  CONST CHAR16  *Kind;
+
+  Kind = GetEntryKind (Entry, Level, MaxLevel);
+  if (StrCmp (Kind, L"table-pointer") == 0) {
     Print (L"  kind=table-pointer; Bit12 is part of next-table PPN, not HGlobal\r\n");
-  } else if ((Level < (MaxLevel - 1)) && ((Entry & (BIT6 | BIT12)) == (BIT6 | BIT12))) {
+  } else if (StrCmp (Kind, L"huge-leaf") == 0) {
     Print (L"  kind=huge-leaf; bit6=HUGE/G, bit12=HGLOBAL\r\n");
-  } else {
+  } else if (StrCmp (Kind, L"page-leaf") == 0) {
     Print (L"  kind=page-leaf; bit6=GLOBAL, bit12 is PFN bit 0\r\n");
+  } else {
+    Print (L"  kind=invalid-entry; no lower-level table or leaf mapping\r\n");
   }
 }
 
@@ -282,9 +310,11 @@ DumpPageWalk (
     PrintEntryKind (Entry, Level, MaxLevel);
 
     if (!IsTableEntry (Entry, Level, MaxLevel)) {
-      if (Level < (MaxLevel - 1)) {
-        Print (L"Stop: leaf/huge/invalid entry at level %lu.\r\n", Level);
-      }
+      Print (
+        L"Stop: page-table walk ended at level %lu (%s).\r\n",
+        Level,
+        GetEntryKind (Entry, Level, MaxLevel)
+        );
 
       return;
     }
