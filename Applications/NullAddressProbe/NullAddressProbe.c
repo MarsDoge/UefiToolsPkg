@@ -6,7 +6,7 @@
   the load should raise a CPU exception before the success line is printed.
 
   Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  SPDX-License-Identifier: Apache-2.0
 **/
 
 #include <Uefi.h>

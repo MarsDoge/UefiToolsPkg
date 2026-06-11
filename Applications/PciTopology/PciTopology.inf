@@ -3,7 +3,7 @@
 #
 # Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
 #
-# SPDX-License-Identifier: BSD-2-Clause-Patent
+# SPDX-License-Identifier: Apache-2.0
 ##
 
 [Defines]

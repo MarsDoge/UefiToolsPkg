@@ -4,7 +4,7 @@
   The parser walks every image in a PCI Option ROM and prints the ROM size,
   PCIR metadata, code type, and EFI image machine type when present.
 
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  SPDX-License-Identifier: Apache-2.0
 **/
 
 #include <Uefi.h>

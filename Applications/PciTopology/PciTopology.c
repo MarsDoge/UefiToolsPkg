@@ -6,7 +6,7 @@
   already enumerated by firmware, identifies PCI-to-PCI bridges from config
   space, and nests downstream devices by bridge secondary/subordinate bus range.
 
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  SPDX-License-Identifier: Apache-2.0
 **/
 
 #include <Uefi.h>

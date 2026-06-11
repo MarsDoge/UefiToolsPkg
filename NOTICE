@@ -1,0 +1,13 @@
+UefiToolsPkg
+Copyright (c) 2026, MarsDoge. All rights reserved.
+
+UefiToolsPkg is a collection of UEFI diagnostic tools authored by MarsDoge.
+
+Suggested attribution for redistribution:
+
+  UefiToolsPkg by MarsDoge
+  https://github.com/MarsDoge/UefiToolsPkg
+
+This product is licensed under the Apache License, Version 2.0. Redistributions
+of source or binary forms must retain the Apache-2.0 license text, copyright
+notices, and applicable NOTICE attribution.

@@ -141,6 +141,18 @@ build -p YourPlatformPkg/YourPlatform.dsc \
 
 Adjust `WORKSPACE`, `PACKAGES_PATH`, architecture, toolchain tag, and platform DSC path for your local EDK II tree.
 
-## License
+## License and attribution
 
-BSD-2-Clause-Patent, matching common EDK II project style.
+UefiToolsPkg is licensed under the Apache License, Version 2.0.
+
+Redistributions of source or binary forms must retain the Apache-2.0 license
+text, copyright notices, and applicable NOTICE attribution. Modified files must
+carry prominent notices stating that changes were made, as required by
+Apache-2.0.
+
+Suggested attribution:
+
+```text
+UefiToolsPkg by MarsDoge
+https://github.com/MarsDoge/UefiToolsPkg
+```
