@@ -1,0 +1,32 @@
+## @file
+# LoongArch64 virtual-address mapping dump utility.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = LoongArchMappingDump
+  FILE_GUID                      = 8B31E5E9-7B89-4C3D-A727-8B0CDB9CE95E
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  LoongArchMappingDump.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+
+[Protocols]
+  gEfiShellParametersProtocolGuid
