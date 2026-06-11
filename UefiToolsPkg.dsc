@@ -33,5 +33,6 @@
 
 [Components]
   UefiToolsPkg/Applications/NullAddressProbe/NullAddressProbe.inf
+  UefiToolsPkg/Applications/LoongArchMappingDump/LoongArchMappingDump.inf
   UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf
   UefiToolsPkg/Applications/PciTopology/PciTopology.inf
