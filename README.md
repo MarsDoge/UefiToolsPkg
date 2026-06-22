@@ -76,6 +76,8 @@ Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.inf`
 - `Applications/PciTopology/PciTopology.c`
 - `Applications/PciTopology/PciTopology.inf`
+- `Applications/FillNvVars/FillNvVars.c`
+- `Applications/FillNvVars/FillNvVars.inf`
 - `UefiToolsPkg.dsc`
 
 ## Build with EDK II
@@ -118,6 +120,19 @@ build -p UefiToolsPkg/UefiToolsPkg.dsc \
   -m UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf \
   -a LOONGARCH64 -t GCC -b DEBUG
 ```
+
+For the NV variable store fill helper:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/FillNvVars/FillNvVars.inf \
+  -a X64 -t GCC -b DEBUG
+```
+
+`FillNvVars` is intended for QEMU/OVMF diagnostic reproduction. It writes
+dummy non-volatile variables until the firmware variable service reports an
+error, then resets the system so the same variable-store image can be reused
+for the next boot phase.
 
 For a platform DSC, add the module INF to the DSC `[Components]` section and build it with the platform:
 

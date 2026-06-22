@@ -1,0 +1,31 @@
+## @file
+# Fill UEFI non-volatile variable storage for boot option diagnostics.
+#
+# Copyright (c) 2026, MarsDoge
+# SPDX-License-Identifier: Apache-2.0
+##
+
+[Defines]
+  INF_VERSION                    = 1.29
+  BASE_NAME                      = FillNvVars
+  FILE_GUID                      = 2F4F1E3A-8B33-4B1A-91C7-0DAA4D5B8E10
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  FillNvVars.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PrintLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeServicesTableLib
