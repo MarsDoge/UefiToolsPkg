@@ -37,3 +37,4 @@
   UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf
   UefiToolsPkg/Applications/PciTopology/PciTopology.inf
   UefiToolsPkg/Applications/FillNvVars/FillNvVars.inf
+  UefiToolsPkg/Applications/RuntimeVarEditor/RuntimeVarEditor.inf

@@ -8,6 +8,7 @@ It currently contains:
 - `LoongArchMappingDump`, a LOONGARCH64 UEFI Shell / UEFI Application that dumps the page-table walk and current TLB entry for a specified virtual address.
 - `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
 - `PciTopology`, a UEFI Shell / UEFI Application that prints a firmware-visible PCI/PCIe topology tree similar to the relationship view from Linux `lspci -tv`.
+- `RuntimeVarEditor`, a GOP/HII Font UEFI Application for browsing runtime-access UEFI variables, viewing attributes and data, and performing lab-only edits.
 
 `NullAddressProbe` prints a warning, then executes an architecture-specific load from virtual address `0x0` using inline assembly. If firmware page tables enforce NULL pointer detection, the application should stop at that load with a CPU exception. If it prints `DONE`, address `0x0` is readable in the current firmware mapping.
 
@@ -65,6 +66,16 @@ Domain 0000
 
 Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`; devices not enumerated by firmware will not appear.
 
+`RuntimeVarEditor` enumerates variables with `EFI_VARIABLE_RUNTIME_ACCESS` and
+displays them in a GOP-backed graphical browser using the firmware HII Font
+protocol. It shows each variable's name, vendor GUID, attributes, size, and a
+hex/ASCII data preview. Interactive keys support refresh, detail view, one-byte
+hex edits, attribute toggles for `NV` / `BS` / `RT`, and deletion.
+
+This is a firmware-variable editor for VM/lab diagnostics. Editing or deleting
+variables can break boot options, Secure Boot state, OS handoff, or platform
+policy. Use it only with a disposable variable store or a known-good backup.
+
 ## Package layout
 
 - `UefiToolsPkg.dec`
@@ -78,6 +89,8 @@ Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`
 - `Applications/PciTopology/PciTopology.inf`
 - `Applications/FillNvVars/FillNvVars.c`
 - `Applications/FillNvVars/FillNvVars.inf`
+- `Applications/RuntimeVarEditor/RuntimeVarEditor.c`
+- `Applications/RuntimeVarEditor/RuntimeVarEditor.inf`
 - `UefiToolsPkg.dsc`
 
 ## Build with EDK II
@@ -133,6 +146,18 @@ build -p UefiToolsPkg/UefiToolsPkg.dsc \
 dummy non-volatile variables until the firmware variable service reports an
 error, then resets the system so the same variable-store image can be reused
 for the next boot phase.
+
+For the runtime variable graphical editor:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/RuntimeVarEditor/RuntimeVarEditor.inf \
+  -a X64 -t GCC -b DEBUG
+```
+
+`RuntimeVarEditor` uses `EFI_GRAPHICS_OUTPUT_PROTOCOL` and
+`EFI_HII_FONT_PROTOCOL` for drawing. If either protocol is unavailable, it falls
+back to a simple text-console view.
 
 For a platform DSC, add the module INF to the DSC `[Components]` section and build it with the platform:
 

@@ -1,0 +1,36 @@
+## @file
+# Runtime UEFI variable graphical editor application.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: Apache-2.0
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RuntimeVarEditor
+  FILE_GUID                      = A9C9787F-9A5B-4F8B-A0E8-7B9B2152D6DA
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  RuntimeVarEditor.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+  gEfiHiiFontProtocolGuid
