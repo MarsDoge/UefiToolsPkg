@@ -99,11 +99,11 @@ RveFillRect (
     return EFI_SUCCESS;
   }
 
-  if ((X + Width) > Context->Width) {
+  if (Width > (Context->Width - X)) {
     Width = Context->Width - X;
   }
 
-  if ((Y + Height) > Context->Height) {
+  if (Height > (Context->Height - Y)) {
     Height = Context->Height - Y;
   }
 
@@ -227,6 +227,24 @@ RveAttrsToString (
     (Attributes & EFI_VARIABLE_APPEND_WRITE) != 0 ? L"APPEND " : L"",
     Attributes
     );
+}
+
+STATIC
+BOOLEAN
+RveIsAuthenticatedVariable (
+  IN UINT32  Attributes
+  )
+{
+  return (BOOLEAN)((Attributes & (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) != 0);
+}
+
+STATIC
+UINT32
+RveNormalWriteAttributes (
+  IN UINT32  Attributes
+  )
+{
+  return Attributes & ~EFI_VARIABLE_APPEND_WRITE;
 }
 
 STATIC
@@ -358,6 +376,14 @@ RveLoadVariables (
     if (Status == EFI_BUFFER_TOO_SMALL) {
       CHAR16  *NewName;
 
+      if ((NameSize > ((RVE_MAX_NAME_CHARS + 1) * sizeof (CHAR16))) || ((NameSize & (sizeof (CHAR16) - 1)) != 0)) {
+        if (Message != NULL) {
+          UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Stopped: variable name buffer request is invalid or too large.");
+        }
+        Status = EFI_BAD_BUFFER_SIZE;
+        break;
+      }
+
       NewName = ReallocatePool (NameCapacity, NameSize, Name);
       if (NewName == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
@@ -463,7 +489,7 @@ RveLoadVariableData (
   Attributes     = 0;
 
   Status = gRT->GetVariable (Variable->Name, &Variable->VendorGuid, &Attributes, &DataSize, NULL);
-  if (Status != EFI_BUFFER_TOO_SMALL) {
+  if ((Status != EFI_BUFFER_TOO_SMALL) && !((Status == EFI_SUCCESS) && (DataSize == 0))) {
     return Status;
   }
 
@@ -476,10 +502,12 @@ RveLoadVariableData (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = gRT->GetVariable (Variable->Name, &Variable->VendorGuid, &Attributes, &DataSize, Data);
-  if (EFI_ERROR (Status)) {
-    FreePool (Data);
-    return Status;
+  if (DataSize != 0) {
+    Status = gRT->GetVariable (Variable->Name, &Variable->VendorGuid, &Attributes, &DataSize, Data);
+    if (EFI_ERROR (Status)) {
+      FreePool (Data);
+      return Status;
+    }
   }
 
   *DataOut       = Data;
@@ -533,11 +561,17 @@ RveDrawChrome (
 {
   if (Context->Graphics) {
     RveFillRect (Context, 0, 0, Context->Width, 54, mColorHeader);
-    RveFillRect (Context, 10, 64, Context->Width - 20, Context->Height - 82, mColorPanel);
+    if ((Context->Width > 20) && (Context->Height > 82)) {
+      RveFillRect (Context, 10, 64, Context->Width - 20, Context->Height - 82, mColorPanel);
+    }
+
+    if (Context->Height > 36) {
+      RveFillRect (Context, 0, Context->Height - 36, Context->Width, 36, mColorHeader);
+    }
   }
 
   RveDrawText (Context, RVE_LEFT_MARGIN, RVE_TOP_MARGIN, Title, mColorText, mColorHeader);
-  RveDrawText (Context, RVE_LEFT_MARGIN, Context->Height > 28 ? Context->Height - 28 : 0, Help, mColorMuted, mColorBg);
+  RveDrawText (Context, RVE_LEFT_MARGIN, Context->Height > 28 ? Context->Height - 28 : 0, Help, mColorMuted, mColorHeader);
 }
 
 STATIC
@@ -567,6 +601,7 @@ RveDrawList (
   UINTN   Row;
   UINTN   Index;
   UINTN   Rows;
+  UINTN   Last;
   UINTN   Y;
   CHAR16  Line[220];
   CHAR16  Attrs[96];
@@ -575,38 +610,178 @@ RveDrawList (
   RveClear (Context);
   RveDrawChrome (
     Context,
-    L"RuntimeVarEditor - EFI runtime variable browser/editor",
+    L"RuntimeVarEditor [LIST] - EFI runtime variable browser/editor",
     L"Up/Down/PgUp/PgDn select  Enter view  E edit byte  A attrs  D delete  R refresh  Q quit"
     );
 
-  UnicodeSPrint (Line, sizeof (Line), L"Runtime variables: %u    %s", (UINT32)Count, Message == NULL ? L"" : Message);
-  RveDrawText (Context, RVE_LEFT_MARGIN, 64, Line, EFI_ERROR (Count == 0 ? EFI_NOT_FOUND : EFI_SUCCESS) ? mColorWarn : mColorOk, mColorPanel);
-  RveDrawText (Context, RVE_LEFT_MARGIN, 88, L"Name                                  Attributes                         Size       Vendor GUID", mColorMuted, mColorPanel);
-
   Rows = RveVisibleRows (Context);
+  Last = Count == 0 ? 0 : First + Rows;
+  if (Last > Count) {
+    Last = Count;
+  }
+
+  UnicodeSPrint (
+    Line,
+    sizeof (Line),
+    L"Runtime variables: %u    Selected: %u/%u    Showing: %u-%u    %s",
+    (UINT32)Count,
+    (UINT32)(Count == 0 ? 0 : Selected + 1),
+    (UINT32)Count,
+    (UINT32)(Count == 0 ? 0 : First + 1),
+    (UINT32)Last,
+    Message == NULL ? L"" : Message
+    );
+  RveDrawText (Context, RVE_LEFT_MARGIN, 64, Line, Count == 0 ? mColorWarn : mColorOk, mColorPanel);
+
+  if (Count > 0) {
+    RveGuidToString (&Variables[Selected].VendorGuid, Guid, ARRAY_SIZE (Guid));
+    RveAttrsToString (Variables[Selected].Attributes, Attrs, ARRAY_SIZE (Attrs));
+    UnicodeSPrint (Line, sizeof (Line), L"Selected: %s    Size: %u", Variables[Selected].Name, (UINT32)Variables[Selected].DataSize);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 88, Line, mColorWarn, mColorPanel);
+    UnicodeSPrint (Line, sizeof (Line), L"GUID: %s    Attrs: %s", Guid, Attrs);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 110, Line, mColorMuted, mColorPanel);
+  }
+
+  if (Context->Graphics && (Context->Width > 28)) {
+    RveFillRect (Context, 14, 138, Context->Width - 28, RVE_LIST_ROW_HEIGHT, mColorBg);
+  }
+
+  RveDrawText (Context, 24, 140, L"Name", mColorMuted, mColorBg);
+  RveDrawText (Context, 320, 140, L"Attributes", mColorMuted, mColorBg);
+  RveDrawText (Context, 600, 140, L"Size", mColorMuted, mColorBg);
+  RveDrawText (Context, 690, 140, L"Vendor GUID", mColorMuted, mColorBg);
+
   for (Row = 0; Row < Rows; Row++) {
     Index = First + Row;
     if (Index >= Count) {
       break;
     }
 
-    Y = 112 + Row * RVE_LIST_ROW_HEIGHT;
-    if (Index == Selected) {
+    Y = 166 + Row * RVE_LIST_ROW_HEIGHT;
+    if ((Index == Selected) && (Context->Width > 28)) {
       RveFillRect (Context, 14, Y - 2, Context->Width - 28, RVE_LIST_ROW_HEIGHT, mColorSelect);
     }
 
     RveAttrsToString (Variables[Index].Attributes, Attrs, ARRAY_SIZE (Attrs));
     RveGuidToString (&Variables[Index].VendorGuid, Guid, ARRAY_SIZE (Guid));
-    UnicodeSPrint (
-      Line,
-      sizeof (Line),
-      L"%-36.36s %-32.32s %8u  %s",
-      Variables[Index].Name,
-      Attrs,
-      (UINT32)Variables[Index].DataSize,
-      Guid
-      );
-    RveDrawText (Context, RVE_LEFT_MARGIN, Y, Line, mColorText, Index == Selected ? mColorSelect : mColorPanel);
+    RveDrawText (Context, 24, Y, Variables[Index].Name, mColorText, Index == Selected ? mColorSelect : mColorPanel);
+    RveDrawText (Context, 320, Y, Attrs, mColorText, Index == Selected ? mColorSelect : mColorPanel);
+    UnicodeSPrint (Line, sizeof (Line), L"%u", (UINT32)Variables[Index].DataSize);
+    RveDrawText (Context, 600, Y, Line, mColorText, Index == Selected ? mColorSelect : mColorPanel);
+    RveDrawText (Context, 690, Y, Guid, mColorText, Index == Selected ? mColorSelect : mColorPanel);
+  }
+}
+
+STATIC
+VOID
+RveDrawListSelectionInfo (
+  IN RVE_CONTEXT   *Context,
+  IN RVE_VARIABLE  *Variables,
+  IN UINTN         Count,
+  IN UINTN         Selected,
+  IN UINTN         First,
+  IN UINTN         Rows,
+  IN CONST CHAR16  *Message
+  )
+{
+  UINTN   Last;
+  CHAR16  Line[220];
+  CHAR16  Attrs[96];
+  CHAR16  Guid[48];
+
+  Last = Count == 0 ? 0 : First + Rows;
+  if (Last > Count) {
+    Last = Count;
+  }
+
+  if (Context->Graphics && (Context->Width > 28)) {
+    RveFillRect (Context, 14, 62, Context->Width - 28, 72, mColorPanel);
+  }
+
+  UnicodeSPrint (
+    Line,
+    sizeof (Line),
+    L"Runtime variables: %u    Selected: %u/%u    Showing: %u-%u    %s",
+    (UINT32)Count,
+    (UINT32)(Count == 0 ? 0 : Selected + 1),
+    (UINT32)Count,
+    (UINT32)(Count == 0 ? 0 : First + 1),
+    (UINT32)Last,
+    Message == NULL ? L"" : Message
+    );
+  RveDrawText (Context, RVE_LEFT_MARGIN, 64, Line, Count == 0 ? mColorWarn : mColorOk, mColorPanel);
+
+  if (Count > 0) {
+    RveGuidToString (&Variables[Selected].VendorGuid, Guid, ARRAY_SIZE (Guid));
+    RveAttrsToString (Variables[Selected].Attributes, Attrs, ARRAY_SIZE (Attrs));
+    UnicodeSPrint (Line, sizeof (Line), L"Selected: %s    Size: %u", Variables[Selected].Name, (UINT32)Variables[Selected].DataSize);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 88, Line, mColorWarn, mColorPanel);
+    UnicodeSPrint (Line, sizeof (Line), L"GUID: %s    Attrs: %s", Guid, Attrs);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 110, Line, mColorMuted, mColorPanel);
+  }
+}
+
+STATIC
+VOID
+RveDrawListRow (
+  IN RVE_CONTEXT   *Context,
+  IN RVE_VARIABLE  *Variables,
+  IN UINTN         Index,
+  IN UINTN         First,
+  IN UINTN         Selected
+  )
+{
+  UINTN   Y;
+  CHAR16  Line[48];
+  CHAR16  Attrs[96];
+  CHAR16  Guid[48];
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  RowColor;
+
+  if (Index < First) {
+    return;
+  }
+
+  Y = 166 + (Index - First) * RVE_LIST_ROW_HEIGHT;
+  RowColor = (Index == Selected) ? mColorSelect : mColorPanel;
+  if (Context->Graphics && (Context->Width > 28)) {
+    RveFillRect (Context, 14, Y - 2, Context->Width - 28, RVE_LIST_ROW_HEIGHT, RowColor);
+  }
+
+  RveAttrsToString (Variables[Index].Attributes, Attrs, ARRAY_SIZE (Attrs));
+  RveGuidToString (&Variables[Index].VendorGuid, Guid, ARRAY_SIZE (Guid));
+  RveDrawText (Context, 24, Y, Variables[Index].Name, mColorText, RowColor);
+  RveDrawText (Context, 320, Y, Attrs, mColorText, RowColor);
+  UnicodeSPrint (Line, sizeof (Line), L"%u", (UINT32)Variables[Index].DataSize);
+  RveDrawText (Context, 600, Y, Line, mColorText, RowColor);
+  RveDrawText (Context, 690, Y, Guid, mColorText, RowColor);
+}
+
+STATIC
+VOID
+RveRedrawListSelection (
+  IN RVE_CONTEXT   *Context,
+  IN RVE_VARIABLE  *Variables,
+  IN UINTN         Count,
+  IN UINTN         OldSelected,
+  IN UINTN         NewSelected,
+  IN UINTN         First,
+  IN CONST CHAR16  *Message
+  )
+{
+  UINTN  Rows;
+
+  if ((Count == 0) || (Variables == NULL)) {
+    return;
+  }
+
+  Rows = RveVisibleRows (Context);
+  RveDrawListSelectionInfo (Context, Variables, Count, NewSelected, First, Rows, Message);
+  if ((OldSelected >= First) && (OldSelected < First + Rows)) {
+    RveDrawListRow (Context, Variables, OldSelected, First, NewSelected);
+  }
+
+  if ((NewSelected != OldSelected) && (NewSelected >= First) && (NewSelected < First + Rows)) {
+    RveDrawListRow (Context, Variables, NewSelected, First, NewSelected);
   }
 }
 
@@ -633,7 +808,7 @@ RveReadLine (
 
   while (TRUE) {
     UnicodeSPrint (Line, sizeof (Line), L"%s%s_", Prompt, Buffer);
-    if (Context->Graphics) {
+    if (Context->Graphics && (Context->Width > 32) && (Context->Height > 58)) {
       RveFillRect (Context, 16, Context->Height - 58, Context->Width - 32, 24, mColorBg);
     }
 
@@ -689,6 +864,10 @@ RveParseHexUintn (
   Result = 0;
   for (; Text[Index] != L'\0'; Index++) {
     Ch = Text[Index];
+    if (Result > (MAX_UINTN >> 4)) {
+      return FALSE;
+    }
+
     Result <<= 4;
     if ((Ch >= L'0') && (Ch <= L'9')) {
       Result |= Ch - L'0';
@@ -715,7 +894,7 @@ RveConfirm (
   EFI_INPUT_KEY  Key;
   UINTN          EventIndex;
 
-  if (Context->Graphics) {
+  if (Context->Graphics && (Context->Width > 32) && (Context->Height > 58)) {
     RveFillRect (Context, 16, Context->Height - 58, Context->Width - 32, 24, mColorBg);
   }
 
@@ -752,6 +931,9 @@ RveEditByte (
   UINTN       Offset;
   UINTN       ByteValue;
   CHAR16      Input[32];
+  CHAR16      Prompt[96];
+  CHAR16      Confirm[160];
+  UINT8       OldValue;
 
   Status = RveLoadVariableData (Variable, &Data, &DataSize, &Attributes);
   if (EFI_ERROR (Status)) {
@@ -765,22 +947,38 @@ RveEditByte (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = RveReadLine (Context, L"Offset hex: ", Input, ARRAY_SIZE (Input));
+  if (RveIsAuthenticatedVariable (Attributes)) {
+    FreePool (Data);
+    UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Authenticated variables are read-only in this tool.");
+    return EFI_SECURITY_VIOLATION;
+  }
+
+  UnicodeSPrint (Prompt, sizeof (Prompt), L"Offset hex 0..0x%x: ", (UINT32)(DataSize - 1));
+  Status = RveReadLine (Context, Prompt, Input, ARRAY_SIZE (Input));
   if (EFI_ERROR (Status) || !RveParseHexUintn (Input, &Offset) || (Offset >= DataSize)) {
     FreePool (Data);
     UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Edit aborted or offset out of range.");
     return EFI_ABORTED;
   }
 
-  Status = RveReadLine (Context, L"New byte hex 00-ff: ", Input, ARRAY_SIZE (Input));
+  OldValue = Data[Offset];
+  UnicodeSPrint (Prompt, sizeof (Prompt), L"Offset 0x%x current=%02x, new byte 00-ff: ", (UINT32)Offset, (UINT32)OldValue);
+  Status = RveReadLine (Context, Prompt, Input, ARRAY_SIZE (Input));
   if (EFI_ERROR (Status) || !RveParseHexUintn (Input, &ByteValue) || (ByteValue > 0xFF)) {
     FreePool (Data);
     UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Edit aborted or byte invalid.");
     return EFI_ABORTED;
   }
 
+  UnicodeSPrint (Confirm, sizeof (Confirm), L"Write %s offset 0x%x: %02x -> %02x ? y/N", Variable->Name, (UINT32)Offset, (UINT32)OldValue, (UINT32)ByteValue);
+  if (!RveConfirm (Context, Confirm)) {
+    FreePool (Data);
+    UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Byte edit cancelled.");
+    return EFI_ABORTED;
+  }
+
   Data[Offset] = (UINT8)ByteValue;
-  Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, Attributes, DataSize, Data);
+  Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, RveNormalWriteAttributes (Attributes), DataSize, Data);
   FreePool (Data);
 
   UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"SetVariable byte edit: %r", Status);
@@ -805,6 +1003,8 @@ RveEditAttributes (
   UINTN          EventIndex;
   CHAR16         Line[220];
   CHAR16         AttrText[128];
+  CHAR16         OldAttrText[128];
+  CHAR16         Confirm[180];
 
   Status = RveLoadVariableData (Variable, &Data, &DataSize, &Attributes);
   if (EFI_ERROR (Status)) {
@@ -812,16 +1012,28 @@ RveEditAttributes (
     return Status;
   }
 
-  NewAttributes = Attributes;
+  if (RveIsAuthenticatedVariable (Attributes)) {
+    FreePool (Data);
+    UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Authenticated variables are read-only in this tool.");
+    return EFI_SECURITY_VIOLATION;
+  }
+
+  NewAttributes = RveNormalWriteAttributes (Attributes);
   while (TRUE) {
     RveClear (Context);
-    RveDrawChrome (Context, L"RuntimeVarEditor - attribute editor", L"N toggle NV  B toggle BS  T toggle RT  S save  Esc cancel");
+    RveDrawChrome (Context, L"RuntimeVarEditor [ATTRIBUTES] - attribute editor", L"N toggle NV  B toggle BS  T toggle RT  S save  Esc cancel");
     RveAttrsToString (NewAttributes, AttrText, ARRAY_SIZE (AttrText));
+    RveAttrsToString (Attributes, OldAttrText, ARRAY_SIZE (OldAttrText));
     UnicodeSPrint (Line, sizeof (Line), L"Variable: %s", Variable->Name);
     RveDrawText (Context, RVE_LEFT_MARGIN, 78, Line, mColorText, mColorPanel);
-    UnicodeSPrint (Line, sizeof (Line), L"Current: 0x%08x    New: %s", Attributes, AttrText);
-    RveDrawText (Context, RVE_LEFT_MARGIN, 104, Line, mColorWarn, mColorPanel);
-    RveDrawText (Context, RVE_LEFT_MARGIN, 132, L"Warning: changing firmware variables can make firmware or OS boot paths unusable.", mColorDanger, mColorPanel);
+    UnicodeSPrint (Line, sizeof (Line), L"Current: %s", OldAttrText);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 104, Line, mColorMuted, mColorPanel);
+    UnicodeSPrint (Line, sizeof (Line), L"New:     %s", AttrText);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 128, Line, mColorWarn, mColorPanel);
+    RveDrawText (Context, RVE_LEFT_MARGIN, 156, L"Warning: changing firmware variables can make firmware or OS boot paths unusable.", mColorDanger, mColorPanel);
+    if ((Message != NULL) && (Message[0] != L'\0')) {
+      RveDrawText (Context, RVE_LEFT_MARGIN, 184, Message, mColorWarn, mColorPanel);
+    }
 
     gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &EventIndex);
     if (EFI_ERROR (gST->ConIn->ReadKeyStroke (gST->ConIn, &Key))) {
@@ -849,11 +1061,17 @@ RveEditAttributes (
         break;
       case L's':
       case L'S':
-        if (!RveConfirm (Context, L"Save attribute change? y/N")) {
+        if (((NewAttributes & EFI_VARIABLE_RUNTIME_ACCESS) != 0) && ((NewAttributes & EFI_VARIABLE_BOOTSERVICE_ACCESS) == 0)) {
+          UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Invalid attrs: RT requires BS.");
           break;
         }
 
-        Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, NewAttributes, DataSize, Data);
+        UnicodeSPrint (Confirm, sizeof (Confirm), L"Save attrs for %s: 0x%08x -> 0x%08x ? y/N", Variable->Name, Attributes, NewAttributes);
+        if (!RveConfirm (Context, Confirm)) {
+          break;
+        }
+
+        Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, RveNormalWriteAttributes (NewAttributes), DataSize, Data);
         FreePool (Data);
         UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"SetVariable attributes: %r", Status);
         return Status;
@@ -873,13 +1091,25 @@ RveDeleteVariable (
   )
 {
   EFI_STATUS  Status;
+  CHAR16      Guid[48];
+  CHAR16      Attrs[128];
+  CHAR16      Prompt[220];
 
-  if (!RveConfirm (Context, L"Delete selected variable? y/N")) {
+  if (RveIsAuthenticatedVariable (Variable->Attributes)) {
+    UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Authenticated variables are read-only in this tool.");
+    return EFI_SECURITY_VIOLATION;
+  }
+
+  RveGuidToString (&Variable->VendorGuid, Guid, ARRAY_SIZE (Guid));
+  RveAttrsToString (Variable->Attributes, Attrs, ARRAY_SIZE (Attrs));
+  UnicodeSPrint (Prompt, sizeof (Prompt), L"Delete %s size=%u attrs=%s ? y/N", Variable->Name, (UINT32)Variable->DataSize, Attrs);
+  RveDrawText (Context, RVE_LEFT_MARGIN, Context->Height > 84 ? Context->Height - 84 : 0, Guid, mColorDanger, mColorBg);
+  if (!RveConfirm (Context, Prompt)) {
     UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Delete cancelled.");
     return EFI_ABORTED;
   }
 
-  Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, 0, 0, NULL);
+  Status = gRT->SetVariable (Variable->Name, &Variable->VendorGuid, RveNormalWriteAttributes (Variable->Attributes), 0, NULL);
   UnicodeSPrint (Message, MessageChars * sizeof (CHAR16), L"Delete SetVariable: %r", Status);
   return Status;
 }
@@ -905,11 +1135,12 @@ RveDrawDetails (
   UINTN       Col;
   UINTN       Value;
   UINTN       Y;
-  CHAR16      Hex[64];
+  UINTN       PageEnd;
+  CHAR16      Hex[72];
   CHAR16      Ascii[20];
 
   RveClear (Context);
-  RveDrawChrome (Context, L"RuntimeVarEditor - variable detail", L"Left/Right hex page  E edit byte  A attrs  D delete  Esc/list  Q quit");
+  RveDrawChrome (Context, L"RuntimeVarEditor [DETAIL] - variable detail", L"Left/Right hex page  E edit byte  A attrs  D delete  Esc/list  Q quit");
 
   RveGuidToString (&Variable->VendorGuid, Guid, ARRAY_SIZE (Guid));
   RveAttrsToString (Variable->Attributes, Attrs, ARRAY_SIZE (Attrs));
@@ -931,8 +1162,14 @@ RveDrawDetails (
     PageOffset = 0;
   }
 
-  UnicodeSPrint (Line, sizeof (Line), L"Data page offset 0x%08x    %s", (UINT32)PageOffset, Message == NULL ? L"" : Message);
+  PageEnd = DataSize == 0 ? 0 : PageOffset + RVE_HEX_PAGE_BYTES - 1;
+  if ((DataSize != 0) && (PageEnd >= DataSize)) {
+    PageEnd = DataSize - 1;
+  }
+
+  UnicodeSPrint (Line, sizeof (Line), L"Data page 0x%08x-0x%08x of 0x%08x    %s", (UINT32)PageOffset, (UINT32)PageEnd, (UINT32)DataSize, Message == NULL ? L"" : Message);
   RveDrawText (Context, RVE_LEFT_MARGIN, 146, Line, mColorWarn, mColorPanel);
+  RveDrawText (Context, RVE_LEFT_MARGIN, 170, L"Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F    ASCII", mColorMuted, mColorPanel);
 
   for (Row = 0; Row < 16; Row++) {
     Offset = PageOffset + Row * 16;
@@ -945,6 +1182,10 @@ RveDrawDetails (
     for (Col = 0; Col < 16; Col++) {
       if ((Offset + Col) < DataSize) {
         Value = Data[Offset + Col];
+        if (Col == 8) {
+          UnicodeSPrint (Hex + StrLen (Hex), sizeof (Hex) - StrLen (Hex) * sizeof (CHAR16), L" ");
+        }
+
         UnicodeSPrint (Hex + StrLen (Hex), sizeof (Hex) - StrLen (Hex) * sizeof (CHAR16), L"%02x ", (UINT32)Value);
         Ascii[Col] = ((Value >= 0x20) && (Value <= 0x7E)) ? (CHAR16)Value : L'.';
       } else {
@@ -955,7 +1196,7 @@ RveDrawDetails (
     Ascii[16] = L'\0';
 
     UnicodeSPrint (Line, sizeof (Line), L"%08x  %-48s  |%s|", (UINT32)Offset, Hex, Ascii);
-    Y = 176 + Row * RVE_LIST_ROW_HEIGHT;
+    Y = 194 + Row * RVE_LIST_ROW_HEIGHT;
     RveDrawText (Context, RVE_LEFT_MARGIN, Y, Line, mColorText, mColorPanel);
   }
 
@@ -974,11 +1215,17 @@ RveRun (
   UINTN          Selected;
   UINTN          First;
   UINTN          Rows;
+  UINTN          OldSelected;
+  UINTN          OldFirst;
+  BOOLEAN        FastSelectionUpdate;
+  BOOLEAN        SelectionKey;
+  BOOLEAN        ScrollChanged;
   BOOLEAN        Detail;
   UINTN          DetailOffset;
   EFI_INPUT_KEY  Key;
   UINTN          EventIndex;
   CHAR16         Message[160];
+  BOOLEAN        FullRedraw;
 
   Variables = NULL;
   Count     = 0;
@@ -987,6 +1234,7 @@ RveRun (
   Detail    = FALSE;
   DetailOffset = 0;
   Message[0] = L'\0';
+  FullRedraw = TRUE;
 
   Status = RveLoadVariables (&Variables, &Count, Message, ARRAY_SIZE (Message));
   if (EFI_ERROR (Status)) {
@@ -1010,10 +1258,14 @@ RveRun (
       First = Selected - Rows + 1;
     }
 
-    if (Detail && (Count > 0)) {
-      RveDrawDetails (Context, &Variables[Selected], DetailOffset, Message);
-    } else {
-      RveDrawList (Context, Variables, Count, Selected, First, Message);
+    if (FullRedraw) {
+      if (Detail && (Count > 0)) {
+        RveDrawDetails (Context, &Variables[Selected], DetailOffset, Message);
+      } else {
+        RveDrawList (Context, Variables, Count, Selected, First, Message);
+      }
+
+      FullRedraw = FALSE;
     }
 
     gBS->WaitForEvent (1, &gST->ConIn->WaitForKey, &EventIndex);
@@ -1030,6 +1282,7 @@ RveRun (
     if (Key.ScanCode == SCAN_ESC) {
       if (Detail) {
         Detail = FALSE;
+        FullRedraw = TRUE;
       } else {
         break;
       }
@@ -1039,6 +1292,7 @@ RveRun (
     if ((Key.UnicodeChar == CHAR_CARRIAGE_RETURN) && (Count > 0)) {
       Detail = TRUE;
       DetailOffset = 0;
+      FullRedraw = TRUE;
       continue;
     }
 
@@ -1052,6 +1306,7 @@ RveRun (
       } else {
         UnicodeSPrint (Message, sizeof (Message), L"Refreshed.");
       }
+      FullRedraw = TRUE;
       continue;
     }
 
@@ -1059,17 +1314,25 @@ RveRun (
       continue;
     }
 
+    OldSelected = Selected;
+    OldFirst = First;
+    SelectionKey = FALSE;
+    ScrollChanged = FALSE;
+    FastSelectionUpdate = FALSE;
+
     switch (Key.ScanCode) {
       case SCAN_UP:
         if (Selected > 0) {
           Selected--;
           DetailOffset = 0;
+          SelectionKey = !Detail;
         }
         break;
       case SCAN_DOWN:
         if ((Selected + 1) < Count) {
           Selected++;
           DetailOffset = 0;
+          SelectionKey = !Detail;
         }
         break;
       case SCAN_PAGE_UP:
@@ -1079,6 +1342,7 @@ RveRun (
           Selected = 0;
         }
         DetailOffset = 0;
+        FullRedraw = TRUE;
         break;
       case SCAN_PAGE_DOWN:
         if ((Selected + Rows) < Count) {
@@ -1087,29 +1351,66 @@ RveRun (
           Selected = Count - 1;
         }
         DetailOffset = 0;
+        FullRedraw = TRUE;
         break;
       case SCAN_LEFT:
         if (Detail && (DetailOffset >= RVE_HEX_PAGE_BYTES)) {
           DetailOffset -= RVE_HEX_PAGE_BYTES;
+          FullRedraw = TRUE;
         }
         break;
       case SCAN_RIGHT:
         if (Detail && ((DetailOffset + RVE_HEX_PAGE_BYTES) < Variables[Selected].DataSize)) {
           DetailOffset += RVE_HEX_PAGE_BYTES;
+          FullRedraw = TRUE;
         }
         break;
       default:
         break;
     }
 
+    if (SelectionKey && (Selected != OldSelected)) {
+      if (Selected < First) {
+        First = Selected;
+      }
+
+      if ((Rows > 0) && (Selected >= (First + Rows))) {
+        First = Selected - Rows + 1;
+      }
+
+      ScrollChanged = (BOOLEAN)(First != OldFirst);
+      FastSelectionUpdate = (BOOLEAN)(!ScrollChanged && !Detail);
+      if (FastSelectionUpdate) {
+        RveRedrawListSelection (Context, Variables, Count, OldSelected, Selected, First, Message);
+        FullRedraw = FALSE;
+        continue;
+      }
+
+      FullRedraw = TRUE;
+    }
+
     if ((Key.UnicodeChar == L'e') || (Key.UnicodeChar == L'E')) {
-      RveEditByte (Context, &Variables[Selected], Message, ARRAY_SIZE (Message));
+      Status = RveEditByte (Context, &Variables[Selected], Message, ARRAY_SIZE (Message));
       RveReadVariableInfo (&Variables[Selected]);
       Detail = TRUE;
+      FullRedraw = TRUE;
     } else if ((Key.UnicodeChar == L'a') || (Key.UnicodeChar == L'A')) {
-      RveEditAttributes (Context, &Variables[Selected], Message, ARRAY_SIZE (Message));
-      RveReadVariableInfo (&Variables[Selected]);
-      Detail = TRUE;
+      Status = RveEditAttributes (Context, &Variables[Selected], Message, ARRAY_SIZE (Message));
+      if (!EFI_ERROR (Status)) {
+        RveFreeVariables (Variables, Count);
+        Variables = NULL;
+        Count     = 0;
+        Status = RveLoadVariables (&Variables, &Count, Message, ARRAY_SIZE (Message));
+        if (Selected >= Count && Count > 0) {
+          Selected = Count - 1;
+        }
+        Detail = FALSE;
+        FullRedraw = TRUE;
+      } else {
+        RveReadVariableInfo (&Variables[Selected]);
+        Detail = TRUE;
+        FullRedraw = TRUE;
+      }
     } else if ((Key.UnicodeChar == L'd') || (Key.UnicodeChar == L'D')) {
       RveDeleteVariable (Context, &Variables[Selected], Message, ARRAY_SIZE (Message));
       RveFreeVariables (Variables, Count);
@@ -1120,6 +1421,7 @@ RveRun (
         Selected = Count - 1;
       }
       Detail = FALSE;
+      FullRedraw = TRUE;
     }
   }
 

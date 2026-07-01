@@ -72,6 +72,10 @@ protocol. It shows each variable's name, vendor GUID, attributes, size, and a
 hex/ASCII data preview. Interactive keys support refresh, detail view, one-byte
 hex edits, attribute toggles for `NV` / `BS` / `RT`, and deletion.
 
+![RuntimeVarEditor list view](Docs/Screenshots/runtime-var-editor-list.png)
+
+![RuntimeVarEditor detail view](Docs/Screenshots/runtime-var-editor-detail.png)
+
 This is a firmware-variable editor for VM/lab diagnostics. Editing or deleting
 variables can break boot options, Secure Boot state, OS handoff, or platform
 policy. Use it only with a disposable variable store or a known-good backup.
