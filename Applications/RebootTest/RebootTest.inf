@@ -1,0 +1,35 @@
+## @file
+# Controlled UEFI Shell reboot-cycle test application.
+#
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+#
+# SPDX-License-Identifier: Apache-2.0
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = RebootTest
+  FILE_GUID                      = A4A76D37-D92B-4E88-83C4-7A3FA429F885
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ShellCEntryLib
+
+[Sources]
+  RebootTest.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  ShellCEntryLib
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
