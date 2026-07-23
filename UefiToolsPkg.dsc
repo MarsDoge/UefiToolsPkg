@@ -25,6 +25,7 @@
   PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
   PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
   RegisterFilterLib|MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
+  ShellCEntryLib|ShellPkg/Library/UefiShellCEntryLib/UefiShellCEntryLib.inf
   StackCheckLib|MdePkg/Library/StackCheckLibNull/StackCheckLibNull.inf
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
   UefiBootServicesTableLib|MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
@@ -36,3 +37,4 @@
   UefiToolsPkg/Applications/LoongArchMappingDump/LoongArchMappingDump.inf
   UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf
   UefiToolsPkg/Applications/PciTopology/PciTopology.inf
+  UefiToolsPkg/Applications/RebootTest/RebootTest.inf

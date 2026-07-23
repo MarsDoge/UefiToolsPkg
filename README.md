@@ -8,6 +8,8 @@ It currently contains:
 - `LoongArchMappingDump`, a LOONGARCH64 UEFI Shell / UEFI Application that dumps the page-table walk and current TLB entry for a specified virtual address.
 - `PciOptionRomInfo`, a UEFI Shell / UEFI Application for inspecting PCI/PCIe Option ROMs exposed by firmware through `EFI_PCI_IO_PROTOCOL`.
 - `PciTopology`, a UEFI Shell / UEFI Application that prints a firmware-visible PCI/PCIe topology tree similar to the relationship view from Linux `lspci -tv`.
+- `RebootTest`, a controlled reboot-cycle test driven by the standard UEFI Shell `startup.nsh` hook, with file-backed progress and a finite stop condition.
+- `RebootTestShell`, a lighter finite reboot-cycle test implemented only with UEFI Shell built-in commands and non-volatile Shell environment variables.
 
 `NullAddressProbe` prints a warning, then executes an architecture-specific load from virtual address `0x0` using inline assembly. If firmware page tables enforce NULL pointer detection, the application should stop at that load with a CPU exception. If it prints `DONE`, address `0x0` is readable in the current firmware mapping.
 
@@ -65,6 +67,40 @@ Domain 0000
 
 Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`; devices not enumerated by firmware will not appear.
 
+`RebootTest` verifies that a system can repeatedly reset and return to the UEFI Shell. Copy `Scripts/RebootTest/startup.nsh` to the root of a writable test ESP and copy `RebootTest.efi` beside it as `startup.nsh.efi`. The script executes `%0.efi`, using the full path of the running script, so it cannot select a copy from another filesystem through `PATH`. Arm a finite test from the Shell:
+
+```text
+startup.nsh.efi start 20 warm 3
+```
+
+The arguments select the reset count, reset type (`warm` or `cold`), and delay in seconds. Progress is stored in `\RebootTest.state` on the same filesystem instead of in NVRAM. Each Shell startup invokes `%0.efi continue`; after the requested count the application prints `PASS` and stops resetting. Press any key during the reset delay to stop early. Confirm that the target Shell discovers and runs this `startup.nsh`; some Shell builds can disable startup processing.
+
+Control commands:
+
+```text
+startup.nsh.efi status
+startup.nsh.efi stop
+startup.nsh.efi clear
+```
+
+See `Scripts/RebootTest/README.md` for installation, recovery, and failure behavior.
+
+For a Shell-only variant with no EFI application, deploy the three files from
+`Scripts/RebootTestShell/` and run:
+
+```text
+arm.nsh 5 warm
+```
+
+This variant uses only `echo`, `set`, `if`, `goto`, `stall`, and `reset`. It is capped at
+20 resets and persists progress in non-volatile Shell environment variables.
+Because it updates firmware variable storage once per cycle and has no
+structured CRC, the application-backed `RebootTest` remains recommended for
+longer or safety-critical runs. Shell variables are raw text substitutions, so
+this lightweight variant assumes trusted arguments and unmodified state; its
+count records reset requests rather than proof of completed resets. See
+`Scripts/RebootTestShell/README.md`.
+
 ## Package layout
 
 - `UefiToolsPkg.dec`
@@ -76,6 +112,14 @@ Note: this is the firmware-enumerated view exposed through `EFI_PCI_IO_PROTOCOL`
 - `Applications/PciOptionRomInfo/PciOptionRomInfo.inf`
 - `Applications/PciTopology/PciTopology.c`
 - `Applications/PciTopology/PciTopology.inf`
+- `Applications/RebootTest/RebootTest.c`
+- `Applications/RebootTest/RebootTest.inf`
+- `Scripts/RebootTest/startup.nsh`
+- `Scripts/RebootTest/README.md`
+- `Scripts/RebootTestShell/startup.nsh`
+- `Scripts/RebootTestShell/arm.nsh`
+- `Scripts/RebootTestShell/stop.nsh`
+- `Scripts/RebootTestShell/README.md`
 - `UefiToolsPkg.dsc`
 
 ## Build with EDK II
@@ -116,6 +160,14 @@ For the existing Option ROM scanner:
 ```sh
 build -p UefiToolsPkg/UefiToolsPkg.dsc \
   -m UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf \
+  -a LOONGARCH64 -t GCC -b DEBUG
+```
+
+For the reboot-cycle test application:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/RebootTest/RebootTest.inf \
   -a LOONGARCH64 -t GCC -b DEBUG
 ```
 
