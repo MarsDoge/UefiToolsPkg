@@ -2,6 +2,47 @@
 
 UefiToolsPkg is a small EDK II package for UEFI utilities.
 
+## Unified application
+
+The DSC now also builds `UefiTools.efi`, a single UEFI Shell application that
+dispatches all seven compiled application commands. The original standalone
+`.efi` files and their existing command lines remain available. This uses the
+same command-table pattern as OsTools, with EDK II's UEFI application entry
+point and Shell argument protocol rather than Linux `main()`/libc.
+
+```text
+UefiTools.efi help
+UefiTools.efi topo
+UefiTools.efi rom
+UefiTools.efi map 0x90000000
+UefiTools.efi vars
+UefiTools.efi reboot status
+UefiTools.efi fillnv
+UefiTools.efi null
+```
+
+`fillnv` writes many non-volatile variables and resets the system;
+`null` deliberately loads from address zero. Use these only in
+controlled lab environments. `map` returns `EFI_UNSUPPORTED`
+outside LOONGARCH64. The Shell-only scripts in `Scripts/RebootTestShell` are
+Shell commands, not compiled code, so they remain separate.
+
+To build the unified image from an EDK II workspace using the `WORKSPACE`,
+`EDK2_DIR`, and `PACKAGES_PATH` setup below:
+
+```sh
+build -p UefiToolsPkg/UefiToolsPkg.dsc \
+  -m UefiToolsPkg/Applications/UefiTools/UefiTools.inf \
+  -a LOONGARCH64 -t GCC -b DEBUG
+```
+
+For the unified reboot-cycle test, copy
+`Scripts/UefiToolsRebootTest/startup.nsh` to the test ESP and put a copy of
+`UefiTools.efi` beside it named `startup.nsh.efi`. Then arm it with
+`startup.nsh.efi reboot start 20 warm 3`. Each Shell startup calls
+`startup.nsh.efi reboot continue`. Do not combine this startup script with
+the standalone RebootTest script. Both variants use the same state-file name.
+
 It currently contains:
 
 - `NullAddressProbe`, a UEFI Shell / UEFI Application that intentionally loads from virtual address `0x0` to test whether firmware null-pointer detection is enforced by page tables.
