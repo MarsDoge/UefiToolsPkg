@@ -47,13 +47,13 @@ typedef enum {
 } TOOL_COMMAND_INDEX;
 
 STATIC CONST TOOL_COMMAND  mCommands[] = {
-  { L"pci-topology",       L"Show firmware-visible PCI topology", PciTopologyMain },
-  { L"pci-option-rom-info", L"Inspect PCI Option ROM images",       PciOptionRomInfoMain },
-  { L"loongarch-mapping",  L"Dump LoongArch page tables and TLB", LoongArchMappingDumpMain },
-  { L"runtime-var-editor", L"Open the runtime variable editor",   RuntimeVarEditorMain },
-  { L"reboot-test",        L"Run a finite reboot-cycle test",     NULL },
-  { L"fill-nv-vars",       L"Fill the NV variable store and reset", FillNvVarsMain },
-  { L"null-address-probe", L"Probe address zero (may fault)",     NullAddressProbeMain }
+  { L"topo",   L"Show firmware-visible PCI topology", PciTopologyMain },
+  { L"rom",    L"Inspect PCI Option ROM images",       PciOptionRomInfoMain },
+  { L"map",    L"Dump LoongArch page tables and TLB", LoongArchMappingDumpMain },
+  { L"vars",   L"Open the runtime variable editor",   RuntimeVarEditorMain },
+  { L"reboot", L"Run a finite reboot-cycle test",     NULL },
+  { L"fillnv", L"Fill the NV variable store and reset", FillNvVarsMain },
+  { L"null",   L"Probe address zero (may fault)",     NullAddressProbeMain }
 };
 
 STATIC
@@ -66,11 +66,11 @@ PrintUsage (
 
   Print (L"Usage: UefiTools.efi <command> [args]\r\nCommands:\r\n");
   for (Index = 0; Index < ARRAY_SIZE (mCommands); Index++) {
-    Print (L"  %-21s %s\r\n", mCommands[Index].Name, mCommands[Index].Description);
+    Print (L"  %-8s %s\r\n", mCommands[Index].Name, mCommands[Index].Description);
   }
 
-  Print (L"  help                  Show this list\r\n");
-  Print (L"Example: UefiTools.efi reboot-test start 20 warm 3\r\n");
+  Print (L"  help     Show this list\r\n");
+  Print (L"Example: UefiTools.efi reboot start 20 warm 3\r\n");
 }
 
 EFI_STATUS

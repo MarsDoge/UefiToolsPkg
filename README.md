@@ -12,18 +12,18 @@ point and Shell argument protocol rather than Linux `main()`/libc.
 
 ```text
 UefiTools.efi help
-UefiTools.efi pci-topology
-UefiTools.efi pci-option-rom-info
-UefiTools.efi loongarch-mapping 0x90000000
-UefiTools.efi runtime-var-editor
-UefiTools.efi reboot-test status
-UefiTools.efi fill-nv-vars
-UefiTools.efi null-address-probe
+UefiTools.efi topo
+UefiTools.efi rom
+UefiTools.efi map 0x90000000
+UefiTools.efi vars
+UefiTools.efi reboot status
+UefiTools.efi fillnv
+UefiTools.efi null
 ```
 
-`fill-nv-vars` writes many non-volatile variables and resets the system;
-`null-address-probe` deliberately loads from address zero. Use these only in
-controlled lab environments. `loongarch-mapping` returns `EFI_UNSUPPORTED`
+`fillnv` writes many non-volatile variables and resets the system;
+`null` deliberately loads from address zero. Use these only in
+controlled lab environments. `map` returns `EFI_UNSUPPORTED`
 outside LOONGARCH64. The Shell-only scripts in `Scripts/RebootTestShell` are
 Shell commands, not compiled code, so they remain separate.
 
@@ -39,8 +39,8 @@ build -p UefiToolsPkg/UefiToolsPkg.dsc \
 For the unified reboot-cycle test, copy
 `Scripts/UefiToolsRebootTest/startup.nsh` to the test ESP and put a copy of
 `UefiTools.efi` beside it named `startup.nsh.efi`. Then arm it with
-`startup.nsh.efi reboot-test start 20 warm 3`. Each Shell startup calls
-`startup.nsh.efi reboot-test continue`. Do not combine this startup script with
+`startup.nsh.efi reboot start 20 warm 3`. Each Shell startup calls
+`startup.nsh.efi reboot continue`. Do not combine this startup script with
 the standalone RebootTest script. Both variants use the same state-file name.
 
 It currently contains:
