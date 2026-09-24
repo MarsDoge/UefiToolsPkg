@@ -1,0 +1,47 @@
+## @file
+# Unified command dispatcher for UEFI tools.
+# Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
+# SPDX-License-Identifier: Apache-2.0
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = UefiTools
+  FILE_GUID                      = 53BC478D-B70B-48B4-911B-4B1C734B8D94
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = UefiMain
+
+[Sources]
+  UefiTools.c
+  FillNvVarsCommand.c
+  LoongArchMappingDumpCommand.c
+  NullAddressProbeCommand.c
+  PciOptionRomInfoCommand.c
+  PciTopologyCommand.c
+  RebootTestCommand.c
+  RuntimeVarEditorCommand.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+  UefiToolsPkg/UefiToolsPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  PrintLib
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  UefiRuntimeServicesTableLib
+
+[Protocols]
+  gEfiShellParametersProtocolGuid
+  gEfiLoadedImageProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiPciIoProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+  gEfiHiiFontProtocolGuid

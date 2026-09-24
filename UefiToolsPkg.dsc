@@ -33,6 +33,7 @@
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
 
 [Components]
+  UefiToolsPkg/Applications/UefiTools/UefiTools.inf
   UefiToolsPkg/Applications/NullAddressProbe/NullAddressProbe.inf
   UefiToolsPkg/Applications/LoongArchMappingDump/LoongArchMappingDump.inf
   UefiToolsPkg/Applications/PciOptionRomInfo/PciOptionRomInfo.inf
