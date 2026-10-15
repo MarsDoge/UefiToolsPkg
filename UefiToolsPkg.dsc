@@ -1,5 +1,6 @@
 ## @file
 # UEFI tools package build description.
+# Modified: register standalone NicDmaScan alongside unified nicdma.
 #
 # Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
 #
@@ -41,3 +42,4 @@
   UefiToolsPkg/Applications/FillNvVars/FillNvVars.inf
   UefiToolsPkg/Applications/RuntimeVarEditor/RuntimeVarEditor.inf
   UefiToolsPkg/Applications/RebootTest/RebootTest.inf
+  UefiToolsPkg/Applications/NicDmaScan/NicDmaScan.inf

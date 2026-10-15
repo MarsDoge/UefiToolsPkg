@@ -1,11 +1,13 @@
 # UefiToolsPkg
 
+<!-- Modified: integrate the nicdma command and read-only DMA documentation. -->
+
 UefiToolsPkg is a small EDK II package for UEFI utilities.
 
 ## Unified application
 
 The DSC now also builds `UefiTools.efi`, a single UEFI Shell application that
-dispatches all seven compiled application commands. The original standalone
+dispatches all eight compiled application commands. The original standalone
 `.efi` files and their existing command lines remain available. This uses the
 same command-table pattern as OsTools, with EDK II's UEFI application entry
 point and Shell argument protocol rather than Linux `main()`/libc.
@@ -14,6 +16,8 @@ point and Shell argument protocol rather than Linux `main()`/libc.
 UefiTools.efi help
 UefiTools.efi topo
 UefiTools.efi rom
+UefiTools.efi nicdma
+UefiTools.efi nicdma --help
 UefiTools.efi map 0x90000000
 UefiTools.efi vars
 UefiTools.efi reboot status
@@ -44,6 +48,8 @@ For the unified reboot-cycle test, copy
 the standalone RebootTest script. Both variants use the same state-file name.
 
 It currently contains:
+
+- `NicDmaScan` / `UefiTools.efi nicdma`, a read-only PCI network inventory and Realtek `10ec:8168` PCI rev `15` ring observer. The default reports device-DMA bases, not physical addresses or all DMA allocations. Explicit `--identity-map` enables bounded descriptor reads under a user-asserted mapping assumption. See [usage and safety boundaries](Applications/NicDmaScan/README.md).
 
 - `NullAddressProbe`, a UEFI Shell / UEFI Application that intentionally loads from virtual address `0x0` to test whether firmware null-pointer detection is enforced by page tables.
 - `LoongArchMappingDump`, a LOONGARCH64 UEFI Shell / UEFI Application that dumps the page-table walk and current TLB entry for a specified virtual address.
@@ -158,6 +164,9 @@ count records reset requests rather than proof of completed resets. See
 `Scripts/RebootTestShell/README.md`.
 
 ## Package layout
+
+- `Applications/NicDmaScan/` (scanner, decoder, tests, usage guide)
+- `Applications/UefiTools/NicDmaScanCommand.c` (unified command adapter)
 
 - `UefiToolsPkg.dec`
 - `Applications/NullAddressProbe/NullAddressProbe.c`
