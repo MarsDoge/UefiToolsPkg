@@ -1,5 +1,6 @@
 ## @file
 # Unified command dispatcher for UEFI tools.
+# Modified: include NicDmaScan and its read-only SNP protocol reference.
 # Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
 # SPDX-License-Identifier: Apache-2.0
 ##
@@ -21,6 +22,7 @@
   PciTopologyCommand.c
   RebootTestCommand.c
   RuntimeVarEditorCommand.c
+  NicDmaScanCommand.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -45,3 +47,4 @@
   gEfiPciIoProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gEfiHiiFontProtocolGuid
+  gEfiSimpleNetworkProtocolGuid

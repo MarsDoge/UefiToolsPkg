@@ -1,5 +1,6 @@
 /** @file
   Dispatch the UEFI tool suite from one Shell application.
+  Modified: add the read-only nicdma command without changing existing tools.
 
   Copyright (c) 2026, MarsDoge. All rights reserved.<BR>
   SPDX-License-Identifier: Apache-2.0
@@ -30,6 +31,8 @@ RebootTestMain (
   IN CHAR16  **Argv
   );
 
+INTN EFIAPI NicDmaScanMain (IN UINTN Argc, IN CHAR16 **Argv);
+
 typedef struct {
   CONST CHAR16  *Name;
   CONST CHAR16  *Description;
@@ -43,7 +46,8 @@ typedef enum {
   CommandRuntimeVarEditor,
   CommandRebootTest,
   CommandFillNvVars,
-  CommandNullAddressProbe
+  CommandNullAddressProbe,
+  CommandNicDmaScan
 } TOOL_COMMAND_INDEX;
 
 STATIC CONST TOOL_COMMAND  mCommands[] = {
@@ -53,7 +57,8 @@ STATIC CONST TOOL_COMMAND  mCommands[] = {
   { L"vars",   L"Open the runtime variable editor",   RuntimeVarEditorMain },
   { L"reboot", L"Run a finite reboot-cycle test",     NULL },
   { L"fillnv", L"Fill the NV variable store and reset", FillNvVarsMain },
-  { L"null",   L"Probe address zero (may fault)",     NullAddressProbeMain }
+  { L"null",   L"Probe address zero (may fault)",     NullAddressProbeMain },
+  { L"nicdma", L"Read-only NIC DMA register/descriptor observer", NULL }
 };
 
 STATIC
@@ -112,6 +117,12 @@ UefiMain (
       // RebootTest expects argv[0] to name the executable and argv[1] to
       // contain its own action (start/continue/status/stop/clear).
       return (EFI_STATUS)RebootTestMain (Parameters->Argc - 1, Parameters->Argv + 1);
+    }
+
+    if (Index == CommandNicDmaScan) {
+      INTN Result;
+      Result = NicDmaScanMain (Parameters->Argc - 1, Parameters->Argv + 1);
+      return Result == 0 ? EFI_SUCCESS : (Result == 2 ? EFI_INVALID_PARAMETER : EFI_DEVICE_ERROR);
     }
 
     if (Index == CommandLoongArchMapping) {

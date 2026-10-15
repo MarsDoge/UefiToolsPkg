@@ -1,0 +1,25 @@
+## SPDX-License-Identifier: Apache-2.0
+[Defines]
+  INF_VERSION = 0x0001001B
+  BASE_NAME = NicDmaScan
+  FILE_GUID = 5cb6a85d-8515-435b-b815-a41f46904b39
+  MODULE_TYPE = UEFI_APPLICATION
+  VERSION_STRING = 1.0
+  ENTRY_POINT = ShellCEntryLib
+[Sources]
+  NicDmaScan.c
+  Decode.c
+  Include/Decode.h
+[Packages]
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+[LibraryClasses]
+  ShellCEntryLib
+  UefiLib
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+[Protocols]
+  gEfiPciIoProtocolGuid
+  gEfiSimpleNetworkProtocolGuid
